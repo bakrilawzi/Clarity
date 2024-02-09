@@ -3,8 +3,7 @@ from azure.cognitiveservices.vision.customvision.prediction import CustomVisionP
 from azure.cognitiveservices.vision.customvision.training.models import ImageFileCreateBatch, ImageFileCreateEntry, Region
 from msrest.authentication import ApiKeyCredentials
 import os, time, uuid
-from T
-
+import numpy as np
 try:
     training_key  = os.environ['AZURE_KEY']
     ENDPOINT = os.environ['AZURE_ENDPOINT']
@@ -40,7 +39,9 @@ Ones = {
     "one20": [317, 221, 147, 123],
 }
 Ones_tag = trainer.create_tag(projectid,"one")
-print(Ones_tag)
+# iteration_name = 'MyIteration'
+# new_iter = trainer.update_iteration(projectid,"174a4e4d-2085-484c-8a15-2416d7cc9ff1", nameIter, is_default=True)
+# print(Ones_tag)
 base_image_location = os.path.join (os.path.dirname(__file__), "Data")
 print ("Adding images...")
 tagged_images_with_regions = []
@@ -48,12 +49,16 @@ for filename in Ones.keys():
     x,y,w,h = Ones[filename]
     regions = [ Region(tag_id=Ones_tag.id, left=x,top=y,width=w,height=h) ]
     with open(os.path.join (base_image_location, filename + ".jpg"), mode="rb") as image_contents:
-        tagged_images_with_regions.append(ImageFileCreateEntry(name=filename, contents=image_contents.read(), regions=regions))
-upload_result = trainer.create_images_from_data(projectid, ImageFileCreateBatch(images=tagged_images_with_regions))
+        # tagged_images_with_regions.append(ImageFileCreateEntry(name=filename, contents=image_contents.read(), regions=regions))
+        #Convert images to bytes
+        image_bytes = np.fromfile(os.path.join (base_image_location, filename + ".jpg"), np.uint8)
+        upload_result = trainer.create_images_from_data(projectid, image_bytes.tobytes(), [Ones_tag.id])
+
+# print("All Iterations:", trainer.get_iterations(projectid))
 
 trainer.train_project(projectid)
 while True:
-    iteration  = trainer.get_iteration(projectid,nameIter)
+    iteration  = trainer.get_iteration(projectid,"174a4e4d-2085-484c-8a15-2416d7cc9ff1")
     if iteration.status=="Completed":
         break
     print("Training status: " + iteration.status)
